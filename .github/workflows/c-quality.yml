@@ -135,7 +135,7 @@ jobs:
         run: |
           echo "🔍 Compiling with AddressSanitizer..."
           gcc -Wall -extra -std=c11 -g \
-              -sanitize=address,undefined \
+              -fsanitize=address,undefined \
               -fno-omit-frame-pointer \
               -o main_asan *.c
 
