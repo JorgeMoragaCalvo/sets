@@ -1,0 +1,190 @@
+name: C Code Quality & Security
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+  pull_request:
+    branches:
+      - main
+      - feature/*
+
+jobs:
+  build:
+    name: 🔨 Build & Warnings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compile with strict warnings
+        run: |
+          echo "🔍 Compiling with strict warnings..."
+          gcc -Wall -extra -pedantic -Werror -std=c11 -g -o main *.c
+          echo "✅ Successful compilation without warnings"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-binary
+          path: main
+          retention-days: 1
+
+  static-analysis:
+    name: 🔬 Static Analysis (cppcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run cppcheck
+        run: |
+          echo "🔍 Running static analysis..."
+          cppcheck --enable=all \
+                   --inconclusive \
+                   --std=c11 \
+                   --suppress=missingIncludeSystem \
+                   --error-exitcode=1 \
+                   --output-file=cppcheck-report.txt \
+                   *.c *.h 2>&1 || true
+          
+          echo "📋 cppcheck-report.txt:"
+          cat cppcheck-report.txt
+          
+          cppcheck --enable=warning,style,performance,portability \
+                   --std=c11 \
+                   --suppress=missingIncludeSystem \
+                   --error-exitcode=1 \
+                   *.c *.h
+
+      - name: Upload cppcheck report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cppcheck-report
+          path: cppcheck-report.txt
+
+  clang-tidy:
+    name: 🧹 Linting (clang-tidy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install clang-tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+
+      - name: Run clang-tidy
+        run: |
+          echo "🔍 Running clang-tidy..."
+          clang-tidy *.c \
+            --checks='*,-libcurl-*,-altera-*,-cert-err33-c,-readability-magic-numbers,-cppcoreguidelines-avoid-magic-numbers' \
+            -- -std=c11 2>&1 | tee clang-tidy-report.txt || true
+          echo "✅ Full Analysis"
+
+      - name: Upload clang-tidy report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clang-tidy-report
+          path: clang-tidy-report.txt
+
+  memory-check:
+    name: 🧠 Memory Check (Valgrind)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+
+      - name: Compile with debug symbols
+        run: gcc -Wall -extra -std=c11 -g -o main *.c
+
+      - name: Run Valgrind
+        run: |
+          echo "🔍 Checking memory leaks..."
+          valgrind --leak-check=full \
+                   --show-leak-kinds=all \
+                   --track-origins=yes \
+                   --error-exitcode=1 \
+                   --log-file=valgrind-report.txt \
+                   ./main
+
+          echo "📋 Valgrind report:"
+          cat valgrind-report.txt
+
+      - name: Upload Valgrind report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: valgrind-report
+          path: valgrind-report.txt
+
+  sanitizers:
+    name: 🛡️ Sanitizers (ASan/UBSan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compile with AddressSanitizers
+        run: |
+          echo "🔍 Compiling with AddressSanitizer..."
+          gcc -Wall -extra -std=c11 -g \
+              -sanitize=address,undefined \
+              -fno-omit-frame-pointer \
+              -o main_asan *.c
+
+      - name: Run AddressSanitizer
+        run: |
+          echo "🔍 Running with sanitizers..."
+          ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 ./main_asan
+
+  codeql:
+    name: 🔐 Security Analysis (CodeQL)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          queries: security-and-quality
+
+      - name: Build for CodeQL
+        run: gcc -Wall -std=c11 -o main *.c
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:c-cpp"
+
+  formatting:
+    name: 🎨 Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          echo "🔍 Checking code format..."
+          clang-format --style="{BasedOnStyle: Google, IndentWidth: 4}" --dry-run --Werror *.c *.h 2>&1 || {
+            echo "⚠️ The code does not follow the formatting style."
+            echo "Run: clang-format -i *.c *.h for formatting."
+            exit 0  # Warning, the build does not fail.
+          }
+          echo "✅ Correct format"
