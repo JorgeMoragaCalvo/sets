@@ -38,6 +38,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+
       - name: Run cppcheck
         run: |
           echo "🔍 Running static analysis..."
