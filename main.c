@@ -12,19 +12,19 @@ int main(void) {
 	if (contains(arr, size, val)) printf("%d is in the set\n", val);
 	else printf("%d is not in the set\n", val);
 
-	// int *result = unique(arr_two, size_two, &total_unique);
-	// printf("Unique elements in main:\n");
-	// for (int i = 0; i < total_unique; i++) {
-	// 	printf("%d ", result[i]);
-	// }
 	printf("\n");
 	int union_size;
 	int *arr_union = union_set(arr, size, arr_two, size_two, &union_size);
 	printf("Result of union:\n");
 	for (int i = 0; i < union_size; i++) printf("%d ", arr_union[i]);
 
-	//free(result);
+	int inter_size;
+	int *arr_intersection = intersection(arr, size, arr_two, size_two, &inter_size);
+	printf("\nResult of intersection:\n");
+	for (int i = 0; i < inter_size; i++) printf("%d ", arr_intersection[i]);
+
 	free(arr_union);
+	free(arr_intersection);
 
 	return 0;
 }

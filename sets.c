@@ -10,26 +10,26 @@ bool contains(const int *arr, const int n, const int element) {
 	return false;
 }
 
-int * intersection(const int *arr_one, const int size_one, const int *arr_two, const int size_two) {
-	int major = 0, minor = 0, count = 0;
-	if (size_one > size_two) {
-		major = size_one;
-		minor = size_two;
-	} else {
-		major = size_two;
-		minor = size_one;
-	}
+int * intersection(const int *arr_one, const int size_one, const int *arr_two, const int size_two, int *intersection) {
+	int count = 0;
 
-	for (int i = 0; i < major; i++) {
-		for (int j = 0; j < minor; j++) {
+	for (int i = 0; i < size_one; i++) {
+		for (int j = 0; j < size_two; j++) {
 			if (arr_one[i] == arr_two[j]) count++;
 		}
 	}
+	// add unique function to each array
+	*intersection = count;
+
 	// bug 29-34 - return intersection size - remove unused variables major/minor
 	int *arr_three = (int *)malloc(count * sizeof(int));
-	for (int i = 0; i < major; i++) {
-		for (int j = 0; j < minor; j++) {
-			if (arr_one[i] == arr_two[j]) arr_three[count++] = arr_one[i];
+	int k = 0;
+	for (int i = 0; i < size_one; i++) {
+		for (int j = 0; j < size_two; j++) {
+			if (arr_one[i] == arr_two[j]) {
+				arr_three[k] = arr_one[i];
+				k++;
+			}
 		}
 	}
 	return arr_three;
@@ -37,7 +37,6 @@ int * intersection(const int *arr_one, const int size_one, const int *arr_two, c
 
 // returns an array with no repeat elements and the size
 int *unique(int *arr, const int size, int *unique_count) {
-	// missing sorting function
 	mergeSort(arr, 0, size - 1);
 	int j = 0, k = 0, count = 0;
 	arr[k++] = arr[0];
@@ -60,6 +59,7 @@ int *unique(int *arr, const int size, int *unique_count) {
 }
 // crash when n <= 0
 int minimum(const int *arr, const int n) {
+	if (n <= 0) return 0;
 	int minimum = arr[0];
 	for (int i = 1; i < n; i++) {
 		if (arr[i] < minimum) minimum = arr[i];
@@ -68,6 +68,7 @@ int minimum(const int *arr, const int n) {
 }
 
 int maximum(const int *arr, const int n) {
+	if (n <= 0) return 0;
 	int maximum = arr[0];
 	for (int i = 1; i < n; i++) {
 		if (arr[i] > maximum) maximum = arr[i];
